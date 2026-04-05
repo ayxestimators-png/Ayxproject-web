@@ -1,2 +1,1848 @@
-https://github.com/ayxestimators-png/Ayxproject-web/actionshttps://github.com/ayxestimators-png/Ayxproject-web.git# Ayxproject-web
-AyXEstimatorAiEstimatorpro
+ayxtool/
+├── lib/
+│   ├── main.dart
+│   ├── constants/
+│   │   ├── colors.dart
+│   │   └── strings.dart
+│   ├── secrets/
+│   │   └── secrets_config.dart
+│   ├── services/
+│   │   ├── ai_estimator_service.dart
+│   │   ├── image_service.dart
+│   │   └── payment_service.dart
+│   ├── theme/
+│   │   └── app_theme.dart
+│   ├── screens/
+│   │   ├── home_screen.dart
+│   │   ├── estimator_screen.dart
+│   │   ├── pricing_screen.dart
+│   │   └── about_screen.dart
+│   └── widgets/
+│       ├── hero_widget.dart
+│       ├── how_it_works_widget.dart
+│       ├── pricing_widget.dart
+│       ├── footer_widget.dart
+│       └── help_modal_widget.dart
+├── android/
+├── pubspec.yaml
+├── .gitignore
+├── README.md
+└── LICENSEimport 'package:flutter/material.dart';
+import 'theme/app_theme.dart';
+import 'screens/home_screen.dart';
+import 'screens/estimator_screen.dart';
+import 'screens/pricing_screen.dart';
+import 'screens/about_screen.dart';
+import 'services/payment_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  final paymentService = PaymentService();
+  await paymentService.initialize();
+
+  runApp(const AyXToolApp());
+}
+
+class AyXToolApp extends StatelessWidget {
+  const AyXToolApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'AyXTool',
+      theme: AppTheme.darkTheme(),
+      home: const MainNavigation(),
+      debugShowCheckedModeBanner: false,
+    );
+  }
+}
+
+class MainNavigation extends StatefulWidget {
+  const MainNavigation({Key? key}) : super(key: key);
+
+  @override
+  State<MainNavigation> createState() => _MainNavigationState();
+}
+
+class _MainNavigationState extends State<MainNavigation> {
+  int _currentIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: [
+        HomeScreen(),
+        EstimatorScreen(),
+        PricingScreen(),
+        AboutScreen(),
+      ][_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt),
+            label: 'Estimator',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.card_giftcard),
+            label: 'Pricing',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.info),
+            label: 'About',
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+
+class AppColors {
+  static const Color darkBlue = Color(0xFF0B2A4A);
+  static const Color mediumBlue = Color(0xFF1E3A5F);
+  static const Color lightBlue = Color(0xFF6EC1E4);
+  static const Color brightBlue = Color(0xFF1E40AF);
+  static const Color white = Colors.white;
+  static const Color grayLight = Color(0xFFE5E7EB);
+  static const Color grayMedium = Color(0xFF9CA3AF);
+  static const Color grayDark = Color(0xFF374151);
+}class AppStrings {
+  static const String heroTitle = 'AyXTool – Home repair estimating made simple';
+  static const String heroSubtitle = 'Take a photo of any problem in your home.
+AyXTool shows you what it will cost, DIY vs Pro.';
+  static const String heroButton = 'Open AyXTool Estimator';
+
+  static const String howItWorksTitle = 'How AyXTool works';
+  static const String step1Title = 'Take a photo';
+  static const String step1Desc = 'Snap a picture of the problem in your home.';
+  static const String step2Title = 'See your estimate';
+  static const String step2Desc = 'AyXTool shows you what it will cost, DIY vs Pro.';
+  static const String step3Title = 'Decide & upgrade';
+  static const String step3Desc = 'Lock in your price, and upgrade to your next plan.';
+
+  static const String pricingTitle = 'AyXTool Pricing – No hidden fees';
+  static const String pricingSubtitle = 'All plans include a 2-week free trial. Upgrade or downgrade anytime.';
+  static const String momPlan = 'Mom / Homeowner';
+  static const String momPrice = '$15.00 / month';
+  static const String momDesc = 'Perfect for moms, seniors, and DIYers.';
+  static const String momButton = 'Start free trial (Mom)';
+  
+  static const String proPlan = 'Pro / Handyman';
+  static const String proPrice = '$30.00 / month';
+  static const String proDesc = 'For handymen and small contractors.';
+  static const String proButton = 'Start free trial (Pro)';
+  
+  static const String companyPlan = 'Company / Corporation';
+  static const String companyPrice = '$80.00 / month';
+  static const String companyDesc = 'For companies and crews. 5% off if you prepay 3 months.';
+  static const String companyButton = 'Start free trial (Company)';
+
+  static const String needHelp = 'Need help?';
+  static const String helpDesc = 'Our elderly-friendly help button is always here.';
+  static const String helpButton = 'Call or Chat Help';
+  static const String copyright = '© 2026 AyXTool. All rights reserved.';
+  static const String builtBy = 'Built by: Joshua Mares (Sunizona, Arizona)';
+  static const String estimatorStack = 'AyX Estimator Stack — Original product concept and design.';
+
+  static const String aboutTitle = 'About AyXTool';
+  static const String helpTitle = 'How to use AyXTool';
+  static const String helpSteps = 'Follow these simple steps. Tap the big buttons!';
+}import 'dart:io';
+
+class SecretsConfig {
+  static String get geminiApiKey {
+    final key = Platform.environment['GEMINI_API_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'GEMINI_API_KEY not set. '
+        'Set it via: flutter run --dart-define=GEMINI_API_KEY=your_key_here'
+      );
+    }
+    return key;
+  }
+
+  static String get revenueCatKey {
+    final key = Platform.environment['REVENUECAT_GOOGLE_PLAY_KEY'];
+    if (key == null || key.isEmpty) {
+      throw Exception(
+        'REVENUECAT_GOOGLE_PLAY_KEY not set. '
+        'Set it via: flutter run --dart-define=REVENUECAT_GOOGLE_PLAY_KEY=your_key_here'
+      );
+    }
+    return key;
+  }
+}import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../constants/colors.dart';
+
+class AppTheme {
+  static ThemeData darkTheme() {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: AppColors.darkBlue,
+      appBarTheme: AppBarTheme(
+        backgroundColor: AppColors.mediumBlue,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.white,
+        ),
+      ),
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.inter(
+          fontSize: 36,
+          fontWeight: FontWeight.bold,
+          color: AppColors.white,
+        ),
+        displayMedium: GoogleFonts.inter(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: AppColors.white,
+        ),
+        titleLarge: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: AppColors.white,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: 16,
+          color: AppColors.white,
+        ),
+        bodyMedium: GoogleFonts.inter(
+          fontSize: 14,
+          color: AppColors.grayLight,
+        ),
+        bodySmall: GoogleFonts.inter(
+          fontSize: 12,
+          color: AppColors.grayMedium,
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.brightBlue,
+          foregroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    );
+  }
+}import 'package:revenuecat_flutter/revenuecat_flutter.dart';
+import '../secrets/secrets_config.dart';
+
+class PaymentService {
+  static final PaymentService _instance = PaymentService._internal();
+
+  factory PaymentService() {
+    return _instance;
+  }
+
+  PaymentService._internal();
+
+  late Offering? _offerings;
+  late CustomerInfo? _customerInfo;
+
+  Future<void> initialize() async {
+    try {
+      await Purchases.configure(
+        PurchasesConfiguration(SecretsConfig.revenueCatKey),
+      );
+
+      _offerings = await Purchases.getOfferings();
+      _customerInfo = await Purchases.getCustomerInfo();
+    } catch (e) {
+      print('RevenueCat initialization error: $e');
+    }
+  }
+
+  List<Package>? getAvailablePackages() {
+    return _offerings?.current?.availablePackages;
+  }
+
+  Future<bool> purchasePackage(Package package) async {
+    try {
+      final purchaserInfo = await Purchases.purchasePackage(package);
+      return purchaserInfo.entitlements.active.isNotEmpty;
+    } catch (e) {
+      print('Purchase error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> hasActiveSubscription() async {
+    try {
+      _customerInfo = await Purchases.getCustomerInfo();
+      return _customerInfo?.entitlements.active.isNotEmpty ?? false;
+    } catch (e) {
+      print('Error checking subscription: $e');
+      return false;
+    }
+  }
+
+  Future<bool> restorePurchases() async {
+    try {
+      _customerInfo = await Purchases.restoreTransactions();
+      return _customerInfo?.entitlements.active.isNotEmpty ?? false;
+    } catch (e) {
+      print('Restore purchases error: $e');
+      return false;
+    }
+  }
+}import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
+class ImageService {
+  final ImagePicker _picker = ImagePicker();
+
+  Future<File?> pickImageFromGallery() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        return File(image.path);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to pick image: $e');
+    }
+  }
+
+  Future<File?> takePhotoWithCamera() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+      
+      if (image != null) {
+        return File(image.path);
+      }
+      return null;
+    } catch (e) {
+      throw Exception('Failed to take photo: $e');
+    }
+  }
+}import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:io';
+import 'dart:convert';
+import '../secrets/secrets_config.dart';
+
+class AIEstimatorService {
+  late GenerativeModel model;
+  
+  AIEstimatorService() {
+    model = GenerativeModel(
+      model: 'gemini-1.5-flash',
+      apiKey: SecretsConfig.geminiApiKey,
+    );
+  }
+
+  Future<EstimateResult> analyzePhotoForEstimate(File photoFile) async {
+    try {
+      final imageBytes = await photoFile.readAsBytes();
+
+      final prompt = '''
+You are an expert home repair estimator. Analyze this image of a home repair problem and provide:
+
+1. Problem Identification: What is the problem?
+2. DIY Difficulty: Easy (1-3), Medium (4-6), Hard (7-10)
+3. DIY Cost Estimate: Low, Medium, High (with price range)
+4. Professional Cost Estimate: Low, Medium, High (with price range)
+5. Time to Fix (DIY): Hours/Days estimate
+6. Recommendation: DIY or Professional?
+
+Format the response as JSON with these keys:
+{
+  "problem": "...",
+  "difficulty": 0,
+  "diy_cost": "$...",
+  "pro_cost": "$...",
+  "diy_time": "...",
+  "recommendation": "...",
+  "details": "..."
+}
+
+Be realistic and practical in your estimates.
+''';
+
+      final response = await model.generateContent([
+        Content.multi([
+          TextPart(prompt),
+          DataPart('image/jpeg', imageBytes),
+        ])
+      ]);
+
+      final responseText = response.text;
+      if (responseText == null) {
+        throw Exception('No response from AI model');
+      }
+
+      final jsonString = _extractJson(responseText);
+      final estimate = EstimateResult.fromJson(jsonString);
+
+      return estimate;
+    } catch (e) {
+      throw Exception('Failed to analyze photo: $e');
+    }
+  }
+
+  String _extractJson(String response) {
+    final startIndex = response.indexOf('{');
+    final endIndex = response.lastIndexOf('}') + 1;
+    
+    if (startIndex == -1 || endIndex == 0) {
+      throw Exception('No JSON found in response');
+    }
+    
+    return response.substring(startIndex, endIndex);
+  }
+}
+
+class EstimateResult {
+  final String problem;
+  final int difficulty;
+  final String diyCost;
+  final String proCost;
+  final String diyTime;
+  final String recommendation;
+  final String details;
+
+  EstimateResult({
+    required this.problem,
+    required this.difficulty,
+    required this.diyCost,
+    required this.proCost,
+    required this.diyTime,
+    required this.recommendation,
+    required this.details,
+  });
+
+  factory EstimateResult.fromJson(dynamic json) {
+    if (json is String) {
+      json = jsonDecode(json) as Map<String, dynamic>;
+    }
+    
+    return EstimateResult(
+      problem: json['problem'] ?? 'Unknown problem',
+      difficulty: json['difficulty'] ?? 0,
+      diyCost: json['diy_cost'] ?? 'N/A',
+      proCost: json['pro_cost'] ?? 'N/A',
+      diyTime: json['diy_time'] ?? 'N/A',
+      recommendation: json['recommendation'] ?? 'Professional',
+      details: json['details'] ?? '',
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../constants/strings.dart';
+
+class HeroWidget extends StatelessWidget {
+  const HeroWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        
+        return Container(
+          width: double.infinity,
+          height: isLandscape 
+              ? MediaQuery.of(context).size.height * 0.4
+              : MediaQuery.of(context).size.height * 0.5,
+          decoration: BoxDecoration(
+            color: AppColors.darkBlue,
+          ),
+          child: Stack(
+            children: [
+              CustomPaint(
+                painter: BlueprintPainter(),
+                size: Size.infinite,
+              ),
+              Positioned(
+                top: 16,
+                left: 16,
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.mediumBlue.withOpacity(0.8),
+                    border: Border.all(color: AppColors.brightBlue, width: 1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '© 2026 AyXTool',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.grayLight,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'AyX Estimator Stack – Joshua Mares',
+                        style: TextStyle(
+                          fontSize: 8,
+                          color: AppColors.grayMedium,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              isLandscape
+                  ? _buildLandscapeHero(context)
+                  : _buildPortraitHero(context),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPortraitHero(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              AppStrings.heroTitle,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.displayMedium,
+            ),
+            SizedBox(height: 16),
+            Text(
+              AppStrings.heroSubtitle,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppColors.grayLight,
+                height: 1.6,
+              ),
+            ),
+            SizedBox(height: 32),
+            ElevatedButton(
+              onPressed: () {},
+              child: Text(AppStrings.heroButton),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLandscapeHero(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 4,
+          child: Container(
+            color: AppColors.mediumBlue,
+            child: Center(
+              child: Icon(
+                Icons.architecture,
+                size: 80,
+                color: Colors.white70,
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          flex: 6,
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  AppStrings.heroTitle,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  AppStrings.heroSubtitle,
+                  style: TextStyle(fontSize: 14),
+                ),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {},
+                  child: Text(AppStrings.heroButton),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class BlueprintPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = AppColors.lightBlue.withOpacity(0.1)
+      ..strokeWidth = 1;
+
+    const gridSize = 16.0;
+
+    for (double x = 0; x < size.width; x += gridSize) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    for (double y = 0; y < size.height; y += gridSize) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(BlueprintPainter oldDelegate) => false;
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../constants/strings.dart';
+
+class HowItWorksWidget extends StatelessWidget {
+  const HowItWorksWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.mediumBlue,
+      padding: EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      child: Column(
+        children: [
+          Text(
+            AppStrings.howItWorksTitle,
+            style: Theme.of(context).textTheme.displayMedium,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 32),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isLandscape = constraints.maxWidth > constraints.maxHeight;
+              
+              return isLandscape
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _StepCard(
+                          number: '1',
+                          title: AppStrings.step1Title,
+                          description: AppStrings.step1Desc,
+                        ),
+                        _StepCard(
+                          number: '2',
+                          title: AppStrings.step2Title,
+                          description: AppStrings.step2Desc,
+                        ),
+                        _StepCard(
+                          number: '3',
+                          title: AppStrings.step3Title,
+                          description: AppStrings.step3Desc,
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _StepCard(
+                          number: '1',
+                          title: AppStrings.step1Title,
+                          description: AppStrings.step1Desc,
+                        ),
+                        SizedBox(height: 24),
+                        _StepCard(
+                          number: '2',
+                          title: AppStrings.step2Title,
+                          description: AppStrings.step2Desc,
+                        ),
+                        SizedBox(height: 24),
+                        _StepCard(
+                          number: '3',
+                          title: AppStrings.step3Title,
+                          description: AppStrings.step3Desc,
+                        ),
+                      ],
+                    );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepCard extends StatelessWidget {
+  final String number;
+  final String title;
+  final String description;
+
+  const _StepCard({
+    required this.number,
+    required this.title,
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.brightBlue,
+            shape: BoxShape.circle,
+          ),
+          child: Center(
+            child: Text(
+              number,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: AppColors.white,
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 12),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleLarge,
+          textAlign: TextAlign.center,
+        ),
+        SizedBox(height: 8),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: 14,
+            color: AppColors.grayLight,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../constants/strings.dart';
+
+class PricingWidget extends StatelessWidget {
+  const PricingWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.mediumBlue,
+      padding: EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      child: Column(
+        children: [
+          Text(
+            AppStrings.pricingTitle,
+            style: Theme.of(context).textTheme.displayMedium,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          Text(
+            AppStrings.pricingSubtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.grayLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 32),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isLandscape = constraints.maxWidth > constraints.maxHeight;
+              
+              return isLandscape
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: _PricingCard(
+                            plan: AppStrings.momPlan,
+                            price: AppStrings.momPrice,
+                            description: AppStrings.momDesc,
+                            buttonText: AppStrings.momButton,
+                            backgroundColor: AppColors.darkBlue,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _PricingCard(
+                            plan: AppStrings.proPlan,
+                            price: AppStrings.proPrice,
+                            description: AppStrings.proDesc,
+                            buttonText: AppStrings.proButton,
+                            backgroundColor: AppColors.brightBlue,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: _PricingCard(
+                            plan: AppStrings.companyPlan,
+                            price: AppStrings.companyPrice,
+                            description: AppStrings.companyDesc,
+                            buttonText: AppStrings.companyButton,
+                            backgroundColor: AppColors.darkBlue,
+                            borderColor: AppColors.brightBlue,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        _PricingCard(
+                          plan: AppStrings.momPlan,
+                          price: AppStrings.momPrice,
+                          description: AppStrings.momDesc,
+                          buttonText: AppStrings.momButton,
+                          backgroundColor: AppColors.darkBlue,
+                        ),
+                        SizedBox(height: 16),
+                        _PricingCard(
+                          plan: AppStrings.proPlan,
+                          price: AppStrings.proPrice,
+                          description: AppStrings.proDesc,
+                          buttonText: AppStrings.proButton,
+                          backgroundColor: AppColors.brightBlue,
+                        ),
+                        SizedBox(height: 16),
+                        _PricingCard(
+                          plan: AppStrings.companyPlan,
+                          price: AppStrings.companyPrice,
+                          description: AppStrings.companyDesc,
+                          buttonText: AppStrings.companyButton,
+                          backgroundColor: AppColors.darkBlue,
+                          borderColor: AppColors.brightBlue,
+                        ),
+                      ],
+                    );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PricingCard extends StatelessWidget {
+  final String plan;
+  final String price;
+  final String description;
+  final String buttonText;
+  final Color backgroundColor;
+  final Color? borderColor;
+
+  const _PricingCard({
+    required this.plan,
+    required this.price,
+    required this.description,
+    required this.buttonText,
+    required this.backgroundColor,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        border: borderColor != null ? Border.all(color: borderColor!, width: 2) : null,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Text(
+            plan,
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          Text(
+            price,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.white,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          Text(
+            description,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.grayLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {},
+              child: Text(buttonText),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../constants/strings.dart';
+import 'help_modal_widget.dart';
+
+class FooterWidget extends StatelessWidget {
+  const FooterWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppColors.mediumBlue,
+      padding: EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+      child: Column(
+        children: [
+          Text(
+            AppStrings.needHelp,
+            style: Theme.of(context).textTheme.titleLarge,
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12),
+          Text(
+            AppStrings.helpDesc,
+            style: TextStyle(
+              fontSize: 12,
+              color: AppColors.grayLight,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => HelpModalWidget(),
+                );
+              },
+              child: Text(AppStrings.helpButton),
+            ),
+          ),
+          SizedBox(height: 32),
+          Divider(color: AppColors.brightBlue, height: 1),
+          SizedBox(height: 16),
+          Text(
+            'AyXTool – Construction Estimator',
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.grayLight,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            AppStrings.copyright,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.grayMedium,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          Text(
+            AppStrings.builtBy,
+            style: TextStyle(
+              fontSize: 10,
+              color: AppColors.grayMedium,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 8),
+          Text(
+            AppStrings.estimatorStack,
+            style: TextStyle(
+              fontSize: 9,
+              color: AppColors.grayMedium,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+import '../constants/strings.dart';
+
+class HelpModalWidget extends StatelessWidget {
+  const HelpModalWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = [
+      'Step 1: Open the AyXTool app and find the camera button.',
+      'Step 2: Point your phone at the problem (like a crack, stain, or broken part).',
+      'Step 3: Press the big button that says Take a photo.',
+      'Step 4: Wait a few seconds while AyXTool thinks and shows your estimate.',
+      'Step 5: If you see something you dont like, tap the big button at the bottom that says Call or Chat Help.',
+    ];
+
+    return Dialog(
+      backgroundColor: AppColors.white,
+      child: Padding(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              AppStrings.helpTitle,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.darkBlue,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              AppStrings.helpSteps,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.grayDark,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 24),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: steps.length,
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${index + 1}. ',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.darkBlue,
+                          ),
+                        ),
+                        Expanded(
+                          child: Text(
+                            steps[index],
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppColors.grayDark,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import '../widgets/hero_widget.dart';
+import '../widgets/how_it_works_widget.dart';
+import '../widgets/pricing_widget.dart';
+import '../widgets/footer_widget.dart';
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('AyXTool'),
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            HeroWidget(),
+            HowItWorksWidget(),
+            PricingWidget(),
+            FooterWidget(),
+          ],
+        ),
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'dart:io';
+import '../services/ai_estimator_service.dart';
+import '../services/image_service.dart';
+import '../constants/colors.dart';
+
+class EstimatorScreen extends StatefulWidget {
+  const EstimatorScreen({Key? key}) : super(key: key);
+
+  @override
+  State<EstimatorScreen> createState() => _EstimatorScreenState();
+}
+
+class _EstimatorScreenState extends State<EstimatorScreen> {
+  File? _selectedImage;
+  bool _isAnalyzing = false;
+  EstimateResult? _estimateResult;
+  String? _errorMessage;
+
+  final ImageService _imageService = ImageService();
+  final AIEstimatorService _aiService = AIEstimatorService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('AyXTool Estimator'),
+      ),
+      body: SingleChildScrollView(
+        padimport 'package:flutter/material.dart';
+import 'dart:io';
+import '../services/ai_estimator_service.dart';
+import '../services/image_service.dart';
+import '../constants/colors.dart';
+
+class EstimatorScreen extends StatefulWidget {
+  const EstimatorScreen({Key? key}) : super(key: key);
+
+  @override
+  State<EstimatorScreen> createState() => _EstimatorScreenState();
+}
+
+class _EstimatorScreenState extends State<EstimatorScreen> {
+  File? _selectedImage;
+  bool _isAnalyzing = false;
+  EstimateResult? _estimateResult;
+  String? _errorMessage;
+
+  final ImageService _imageService = ImageService();
+  final AIEstimatorService _aiService = AIEstimatorService();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('AyXTool Estimator'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'Take a photo of your home repair problem',
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 24),
+            
+            if (_selectedImage != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  _selectedImage!,
+                  width: double.infinity,
+                  height: 300,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Container(
+                width: double.infinity,
+                height: 300,
+                decoration: BoxDecoration(
+                  border: Border.all(color: AppColors.brightBlue, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.mediumBlue,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.image_outlined, size: 64, color: AppColors.brightBlue),
+                      SizedBox(height: 12),
+                      Text(
+                        'No photo selected',
+                        style: TextStyle(color: AppColors.grayLight),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            SizedBox(height: 24),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isAnalyzing ? null : _takePhoto,
+                    icon: Icon(Icons.camera_alt),
+                    label: Text('Take Photo'),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isAnalyzing ? null : _pickFromGallery,
+                    icon: Icon(Icons.image),
+                    label: Text('From Gallery'),
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: 24),
+            
+            if (_selectedImage != null)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isAnalyzing ? null : _analyzePhoto,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.brightBlue,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isAnalyzing
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          'Analyze Photo & Get Estimate',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ),
+            
+            SizedBox(height: 24),
+            
+            if (_errorMessage != null)
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.2),
+                  border: Border.all(color: Colors.red),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _errorMessage!,
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            
+            if (_estimateResult != null)
+              _buildEstimateResult(_estimateResult!),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final image = await _imageService.takePhotoWithCamera();
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to take photo: $e';
+      });
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    try {
+      final image = await _imageService.pickImageFromGallery();
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+          _errorMessage = null;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to pick image: $e';
+      });
+    }
+  }
+
+  Future<void> _analyzePhoto() async {
+    if (_selectedImage == null) return;
+
+    setState(() {
+      _isAnalyzing = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await _aiService.analyzePhotoForEstimate(_selectedImage!);
+      setState(() {
+        _estimateResult = result;
+        _isAnalyzing = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Analysis failed: $e';
+        _isAnalyzing = false;
+      });
+    }
+  }
+
+  Widget _buildEstimateResult(EstimateResult result) {
+    final difficultyColor = result.difficulty <= 3
+        ? Colors.green
+        : result.difficulty <= 6
+            ? Colors.orange
+            : Colors.red;
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isLandscape = constraints.maxWidth > constraints.maxHeight;
+        
+        return Container(
+          margin: EdgeInsets.only(top: 24),
+          padding: EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.mediumBlue,
+            border: Border.all(color: AppColors.brightBlue, width: 2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: isLandscape
+              ? _buildLandscapeEstimate(result, difficultyColor)
+              : _buildPortraitEstimate(result, difficultyColor),
+        );
+      },
+    );
+  }
+
+  Widget _buildPortraitEstimate(EstimateResult result, Color difficultyColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Estimate Results',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        SizedBox(height: 16),
+        _buildResultRow('Problem', result.problem),
+        _buildResultRow('DIY Difficulty', '${result.difficulty}/10', difficultyColor),
+        _buildResultRow('DIY Cost', result.diyCost),
+        _buildResultRow('Pro Cost', result.proCost),
+        _buildResultRow('DIY Time', result.diyTime),
+        _buildResultRow('Recommendation', result.recommendation),
+        SizedBox(height: 12),
+        Text(
+          'Details:',
+          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.white),
+        ),
+        SizedBox(height: 8),
+        Text(
+          result.details,
+          style: TextStyle(color: AppColors.grayLight),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeEstimate(EstimateResult result, Color difficultyColor) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: difficultyColor.withOpacity(0.2),
+                  border: Border.all(color: difficultyColor),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Difficulty',
+                      style: TextStyle(fontSize: 12, color: AppColors.grayLight),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      '${result.difficulty}/10',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: difficultyColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.brightBlue.withOpacity(0.2),
+                  border: Border.all(color: AppColors.brightBlue),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Recommendation',
+                      style: TextStyle(fontSize: 10, color: AppColors.grayLight),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      result.recommendation,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.brightBlue,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 16),
+        Expanded(
+          flex: 7,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildResultRow('Problem', result.problem),
+                _buildResultRow('DIY Cost', result.diyCost),
+                _buildResultRow('Pro Cost', result.proCost),
+                _buildResultRow('DIY Time', result.diyTime),
+                Divider(height: 24),
+                Text(
+                  'Details:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  result.details,
+                  style: TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResultRow(String label, String value, [Color? valueColor]) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(color: AppColors.grayLight),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: valueColor ?? AppColors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}import 'package:flutter/material.dart';
+import 'package:revenuecat_flutter/revenuecat_flutter.dart';
+import '../services/payment_service.dart';
+import '../constants/colors.dart';
+
+class PricingScreen extends StatefulWidget {
+  const PricingScreen({Key? key}) : super(key: key);
+
+  @override
+  State<PricingScreen> createState() => _PricingScreenState();
+}
+
+class _PricingScreenState extends State<PricingScreen> {
+  final PaymentService _paymentService = PaymentService();
+  List<Package>? _packages;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializePayments();
+  }
+
+  Future<void> _initializePayments() async {
+    try {
+      await _paymentService.initialize();
+      
+      setState(() {
+        _packages = _paymentService.getAvailablePackages();
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = 'Failed to load pricing: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('AyXTool Pricing'),
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(child: Text(_error!))
+              : SingleChildScrollView(
+                  padding: EdgeInsets.all(24),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Choose Your Plan',
+                        style: Theme.of(context).textTheme.displayMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: 32),
+                      ..._buildPricingCards(),
+                      SizedBox(height: 32),
+                      TextButton(
+                        onPressed: _restorePurchases,
+                        child: Text('Restore Purchases'),
+                      ),
+                    ],
+                  ),
+                ),
+    );
+  }
+
+  List<Widget> _buildPricingCards() {
+    if (_packages == null || _packages!.isEmpty) {
+      return [Center(child: Text('No packages available'))];
+    }
+
+    return _packages!.map((package) {
+      return Container(
+        margin: EdgeInsets.only(bottom: 16),
+        padding: EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.mediumBlue,
+          border: Border.all(color: AppColors.brightBlue),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              package.storeProduct.title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.white,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              package.storeProduct.description,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.grayLight,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              package.storeProduct.priceString,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppColors.white,
+              ),
+            ),
+            SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _purchasePackage(package),
+                child: Text('Start Free Trial'),
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  Future<void> _purchasePackage(Package package) async {
+    try {
+      final success = await _paymentService.purchasePackage(package);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Subscription activated! Enjoy AyXTool.')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Purchase failed. Please try again.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _restorePurchases() async {
+    final success = await _paymentService.restorePurchases();
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Purchases restored!')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No purchases to restore.')),
+      );
+    }
+  }
+}import 'package:flutter/material.dart';
+import '../constants/colors.dart';
+
+class AboutScreen extends StatelessWidget {
+  const AboutScreen({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('About AyXTool'),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'About AyXTool',
+              style: Theme.of(context).textTheme.displayMedium,
+            ),
+            SizedBox(height: 24),
+            _SectionTitle('What is AyXTool?'),
+            SizedBox(height: 8),
+            _SectionContent(
+              'AyXTool is an AI-powered home repair estimator built to help homeowners, moms, seniors, handymen, and contractors understand what their home repairs will cost before they call a professional.',
+            ),
+            SizedBox(height: 32),
+            _SectionTitle('The Idea'),
+            SizedBox(height: 8),
+            _SectionContent(
+              'Homeowners get overcharged because they do not know what a job should cost. Contractors estimate blindly. Moms and seniors are scared to ask for help.
+
+AyXTool solves this: Take a photo or see your DIY vs Pro estimate or know your budget before you commit.',
+            ),
+            SizedBox(height: 32),
+            _SectionTitle('Who Built This?'),
+            SizedBox(height: 8),
+            _SectionContent(
+              'Joshua Mares, a mobile app developer based in Sunizona, Arizona.
+
+Product concept: AyX Estimator Stack (original design, 2026)',
+            ),
+            SizedBox(height: 32),
+            _SectionTitle('Copyright & Ownership'),
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.mediumBlue,
+                border: Border.all(color: AppColors.brightBlue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '© 2026 AyXTool
+
+All rights reserved. AyXTool and the AyX Estimator Stack are original products designed and built by Joshua Mares. Unauthorized reproduction, distribution, or use without permission is prohibited.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.grayLight,
+                  height: 1.6,
+                ),
+              ),
+            ),
+            SizedBox(height: 32),
+            _SectionTitle('Pricing Plans'),
+            SizedBox(height: 8),
+            _SectionContent('Three transparent pricing tiers:'),
+            SizedBox(height: 12),
+            _PricingItem('Mom or Homeowner: $15 per month for individuals and DIYers'),
+            _PricingItem('Pro or Handyman: $30 per month for small contractors'),
+            _PricingItem('Company or Corporation: $80 per month for crews and businesses'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  final String title;
+
+  const _SectionTitle(this.title);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      title,
+      style: TextStyle(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: AppColors.white,
+      ),
+    );
+  }
+}
+
+class _SectionContent extends StatelessWidget {
+  final String content;
+
+  const _SectionContent(this.content);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      content,
+      style: TextStyle(
+        fontSize: 14,
+        color: AppColors.grayLight,
+        height: 1.6,
+      ),
+    );
+  }
+}
+
+class _PricingItem extends StatelessWidget {
+  final String text;
+
+  const _PricingItem(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: TextStyle(color: AppColors.brightBlue, fontSize: 16),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.grayLight,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}name: ayxtool
+description: AyXTool - AI-Powered Construction Estimator
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  google_fonts: ^6.0.0
+  image_picker: ^1.0.0
+  google_generative_ai: ^0.4.0
+  http: ^1.1.0
+  dio: ^5.3.0
+  revenuecat_flutter: ^7.0.0
+  path_provider: ^2.1.0
+  intl: ^0.19.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_linter: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/animations/
