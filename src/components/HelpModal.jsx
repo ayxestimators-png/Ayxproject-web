@@ -8,7 +8,7 @@ const HelpModal = () => {
                 <li>Step 1: Open the AyXTool application.</li>
                 <li>Step 2: Select the feature you want to use from the dashboard.</li>
                 <li>Step 3: Input the required data in the provided fields.</li>
-                <li>Step 4: Click the "Process" button to analyze the data.</li>
+                <li>Step 4: Click the &quot;Process&quot; button to analyze the data.</li>
                 <li>Step 5: Review the results presented on the screen.</li>
             </ol>
         </div>
